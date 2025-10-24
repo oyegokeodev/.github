@@ -21,30 +21,9 @@ runs:
         node-version: ${{ inputs.node-version }}
         cache: 'npm'
 
-    - name: Check for package-lock.json
+    - name: Install dependencies
       shell: bash
-      run: |
-        if [ -f "package-lock.json" ]; then
-          echo "package-lock.json exists, using npm ci"
-          echo "USE_CI=true" >> $GITHUB_ENV
-        else
-          echo "package-lock.json not found, using npm install"
-          echo "USE_CI=false" >> $GITHUB_ENV
-        fi
-
-    - name: Install dependencies (with lock file check)
-      shell: bash
-      run: |
-        if [ "$USE_CI" = "true" ]; then
-          # Try npm ci, if it fails, regenerate lock file
-          if ! npm ci; then
-            echo "npm ci failed, regenerating lock file..."
-            rm -f package-lock.json
-            npm install
-          fi
-        else
-          npm install
-        fi
+      run: npm install
       
     - name: Run tests
       shell: bash
