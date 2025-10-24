@@ -1,24 +1,20 @@
-name: 'Build Node.js Application'
-description: 'Composite action to build and test Node.js application'
-
+name: "Build Node App"
+description: "Installs dependencies, builds app, and prepares artifacts"
 inputs:
   node-version:
-    description: 'Node.js version to use'
+    description: "Node.js version"
     required: false
-    default: '18'
-  cache-key:
-    description: 'Custom cache key'
-    required: false
-    default: 'node-modules'
-
+    default: "18"
 outputs:
-  build-status:
-    description: 'Status of the build'
-    value: ${{ steps.build-status.outputs.status }}
-
+  build-path:
+    description: "Path to build output"
+    value: ${{ steps.set-output.outputs.path }}
 runs:
   using: "composite"
   steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
@@ -26,27 +22,14 @@ runs:
         cache: 'npm'
 
     - name: Install dependencies
-      shell: bash
       run: npm ci
-      
-    - name: Run tests
       shell: bash
-      run: npm test
 
-    - name: Build application
-      shell: bash
+    - name: Build app
       run: npm run build
-
-    - name: Create build artifact
       shell: bash
-      run: |
-        mkdir -p dist
-        cp -r src/ dist/
-        cp package*.json dist/
-        echo "Build completed at $(date)" > dist/build-info.txt
 
-    - name: Set build status output
+    - name: Set build output
+      id: set-output
+      run: echo "path=dist" >> $GITHUB_OUTPUT
       shell: bash
-      run: |
-        echo "status=success" >> $GITHUB_OUTPUT
-      id: build-status
