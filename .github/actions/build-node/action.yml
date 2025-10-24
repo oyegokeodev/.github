@@ -6,15 +6,11 @@ inputs:
     description: 'Node.js version to use'
     required: false
     default: '18'
-  cache-key:
-    description: 'Custom cache key'
-    required: false
-    default: 'node-modules'
 
 outputs:
   build-status:
     description: 'Status of the build'
-    value: ${{ steps.build-status.outputs.status }}
+    value: ${{ steps.set-output.outputs.status }}
 
 runs:
   using: "composite"
@@ -25,9 +21,30 @@ runs:
         node-version: ${{ inputs.node-version }}
         cache: 'npm'
 
-    - name: Install dependencies
+    - name: Check for package-lock.json
       shell: bash
-      run: npm ci
+      run: |
+        if [ -f "package-lock.json" ]; then
+          echo "package-lock.json exists, using npm ci"
+          echo "USE_CI=true" >> $GITHUB_ENV
+        else
+          echo "package-lock.json not found, using npm install"
+          echo "USE_CI=false" >> $GITHUB_ENV
+        fi
+
+    - name: Install dependencies (with lock file check)
+      shell: bash
+      run: |
+        if [ "$USE_CI" = "true" ]; then
+          # Try npm ci, if it fails, regenerate lock file
+          if ! npm ci; then
+            echo "npm ci failed, regenerating lock file..."
+            rm -f package-lock.json
+            npm install
+          fi
+        else
+          npm install
+        fi
       
     - name: Run tests
       shell: bash
@@ -45,8 +62,8 @@ runs:
         cp package*.json dist/
         echo "Build completed at $(date)" > dist/build-info.txt
 
-    - name: Set build status output
+    - name: Set output
       shell: bash
       run: |
         echo "status=success" >> $GITHUB_OUTPUT
-      id: build-status
+      id: set-output
