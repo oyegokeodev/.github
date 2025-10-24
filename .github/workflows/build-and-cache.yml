@@ -1,60 +1,34 @@
-name: Build and Cache Node.js App
-
+name: "Cache and Upload Build"
 on:
   workflow_call:
     inputs:
       node-version:
         required: false
         type: string
-        default: '18'
-      environment:
-        required: false
-        type: string
-        default: 'production'
-    outputs:
-      build-completed:
-        description: "Whether build completed successfully"
-        value: ${{ jobs.build.outputs.build-completed }}
+        default: "18"
 
 jobs:
   build:
-    name: Build and Cache
     runs-on: ubuntu-latest
-    outputs:
-      build-completed: ${{ steps.build-status.outputs.status }}
-    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Call composite build action
-        uses: ./.github/actions/build-node-app
-        id: build-action
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Build Node.js app
+        uses: ./.github/actions/build-node
         with:
           node-version: ${{ inputs.node-version }}
-          cache-key: ${{ github.sha }}
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: nodejs-build-${{ github.sha }}
-          path: dist/
-          retention-days: 7
-
-      - name: Cache node modules
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      - name: Set build status output
-        shell: bash
-        run: |
-          if [ $? -eq 0 ]; then
-            echo "status=success" >> $GITHUB_OUTPUT
-          else
-            echo "status=failed" >> $GITHUB_OUTPUT
-          fi
-        id: build-status
+          name: build-artifact
+          path: dist
