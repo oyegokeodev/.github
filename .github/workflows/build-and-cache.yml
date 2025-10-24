@@ -21,9 +21,12 @@ jobs:
     name: Build and Cache
     runs-on: ubuntu-latest
     outputs:
-      build-completed: ${{ steps.build-action.outputs.build-status }}
+      build-completed: ${{ steps.build-status.outputs.status }}
     
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Call composite build action
         uses: ./.github/actions/build-node-app
         id: build-action
@@ -46,12 +49,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results-${{ github.sha }}
-          path: |
-            **/junit.xml
-            **/test-results/
-          retention-days: 30
+      - name: Set build status output
+        shell: bash
+        run: |
+          if [ $? -eq 0 ]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "status=failed" >> $GITHUB_OUTPUT
+          fi
+        id: build-status

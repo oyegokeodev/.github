@@ -1,13 +1,10 @@
 name: Node.js CI Template
 
 on:
-  pull_request:
-    branches: [ main, develop ]
-  push:
-    branches: [ main, develop ]
-  workflow_dispatch:
+  workflow_call:
     inputs:
       node-version:
+        type: string
         description: 'Node.js version'
         required: false
         default: '18'
@@ -15,15 +12,15 @@ on:
         description: 'Deployment environment'
         required: false
         default: 'staging'
+        type: string
 
 jobs:
   test-and-build:
     name: Test and Build
     uses: ./.github/workflows/build-and-cache.yml
     with:
-      node-version: ${{ inputs.node-version || '18' }}
-      environment: ${{ inputs.environment || 'staging' }}
-    secrets: inherit
+      node-version: ${{ inputs.node-version }}
+      environment: ${{ inputs.environment }}
 
   security-scan:
     name: Security Scan
