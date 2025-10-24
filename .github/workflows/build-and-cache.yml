@@ -1,0 +1,57 @@
+name: Build and Cache Node.js App
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        required: false
+        type: string
+        default: '18'
+      environment:
+        required: false
+        type: string
+        default: 'production'
+    outputs:
+      build-completed:
+        description: "Whether build completed successfully"
+        value: ${{ jobs.build.outputs.build-completed }}
+
+jobs:
+  build:
+    name: Build and Cache
+    runs-on: ubuntu-latest
+    outputs:
+      build-completed: ${{ steps.build-action.outputs.build-status }}
+    
+    steps:
+      - name: Call composite build action
+        uses: oyegokeodev/.github/.github/actions/build-node@main
+        id: build-action
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache-key: ${{ github.sha }}
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nodejs-build-${{ github.sha }}
+          path: dist/
+          retention-days: 7
+
+      - name: Cache node modules
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ github.sha }}
+          path: |
+            **/junit.xml
+            **/test-results/
+          retention-days: 30
