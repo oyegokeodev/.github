@@ -1,0 +1,25 @@
+name: My test github action pipeline
+
+on:
+  push:
+    branches: [main, develop]
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checking
+        run:  echo "It worked"
+      - name: print runner hostname and IP
+        run: |
+              echo "Runner hostname: $(hostname)"
+      - run: echo "The author is ${{ github.actor }}" >> cert.txt
+      - name: zip the cert
+        if: always()
+        run: zip cert.zip cert.txt
+      - name: upload artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cert.zip
+          path: cert.zip
